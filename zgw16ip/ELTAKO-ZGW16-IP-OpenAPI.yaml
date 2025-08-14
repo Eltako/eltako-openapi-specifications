@@ -1,0 +1,3468 @@
+openapi: 3.1.0
+info:
+  title: ELTAKO ZGW16-IP OpenAPI Documentation
+  version: 2.4.1
+  description: |-
+    ## Introduction
+    
+    The ELTAKO [ZGW16WL-IP](https://www.eltako.com/de/?s=zgw16) is a gateway with an IP interface for ELTAKO Series 16 energy meters via WLAN or LAN.
+
+    This is the ZGW16-IP REST API documentation that demonstrates how ZGW16-IP products can be used / configured via HTTP requests.
+    It lists all available [REST](https://en.wikipedia.org/wiki/REST) API endpoints, including return codes.
+
+    All responses returned by the ZGW16-IP devices are in the [JSON](https://www.ecma-international.org/publications-and-standards/standards/ecma-404/) format.
+
+    The ZGW16WL-IP supports as of now up to 16 ELTAKO Modbus energy meters of type DSZ15DZMOD.
+    The bus address of the energy meters must be between 1 and 32.
+
+    ## Supported energy meter
+
+    - DSZ15DZMOD
+
+    ## Getting started
+
+    ### Device URL
+
+    The DNS name of the device is `zgw16-ip.local`.
+
+    By default, the device URL is `192.168.4.1` for the ZGW16-IP device via Wlan and `192.168.5.1` via Ethernet.
+
+    If this IP is changed, for example if the device is connected to a Wlan station, it needs to be adjusted in this document to match the new IP.
+
+    To adjust the IP go to `servers` -> `url` -> `host` -> `default` and change the value inside the `yaml` file.
+
+    Then, the built in REST API Testing tools can be used again to test and debug the device.
+
+    ### Test environment
+
+    There are severaly option to test and interact with the RestAPI. Several are listed below.
+
+    #### Stoplight
+
+    - Import OpenAPI Document into Stoplight Studio.
+      - Download and install Stoplight Studio to your workstation.
+      - 1.2 Open Studio and use the Import File option to load your OpenAPI 3.1 document into the application.
+    - Use the `/password` PUT endpoint within Stoplight to set up a user-defined password.
+      - Go to the `/password` PUT endpoint, select "Preview" on the top right and click on "Try it".
+      - Now, select the correct Server URI called "Device URL".
+      - Set the password inside the JSON and click "Send API Request".
+    - Go to the `/login` POST endpoint to obtain an API key.
+      - Enter the user defined password from the previous step.
+      - Make sure the "Device URL" is selected and press "Send API Request".
+      - The response includes the API key called `accessToken`.
+      - This API key can now be used for authenticating requests to other endpoints.
+    - Once you have the API key, select for example the `/system` GET endpoint, go to "Try it" and paste the key.
+    - All other endpoints are authorized now, go ahead and try.
+
+    ##### Mock Server prism
+
+    Please note that the base URL for the device follows the format `{{protocol}}://{{host}}/api`.
+    However, the Prism mock framework does not support this URL structure and instead uses the format `{{protocol}}://{{host}}`.
+
+    The appropriate URL should be selected based on your specific needs - use the first format when working with the device, and the second format when utilizing the Prism mock server.
+
+    #### Postman
+
+    Postman supports OpenAPI 3.1 documents. To use it as a test environment, follow the steps below.
+
+    - One option to use this OpenAPI documentation is by importing it into the [Postman](https://www.postman.com/) application.
+      - detailed guide on how to do this can be found [here](https://learning.postman.com/docs/getting-started/importing-and-exporting-data/#importing-data-into-postman).
+    - Make sure to use the import option "OpenAPI 3.1 with a Postman Collection".
+      - Additionally, go to the "View Import Settings" and enable "Always inherit authentication".
+    - Now go to the Collection you just imported named "ZGW16-IP API Doc" and follow the instructions of the `/password` PUT endpoint to set the user defined password.
+      - This password is used in the next step to generate an API key.
+    - Follow the instructions of the `/login` POST endpoint to get the API key.
+      - The key can now be used to authenticate the user for any other endpoints.
+    - Once you have the API key, click on the Authorization tab of the Collection and select the Type `API key`.
+      - The Key is `accessToken` and the Value is the apiKey returned by the `/login` endpoint.
+    - All other endpoints are authorized now, go ahead and try.
+
+    #### Alternative Tooling
+    Direct calls using tools like [curl](https://curl.se/) are also possible.
+
+    ### Parameters
+
+    This ZGW16-IP REST API documentation mentions parameters that are required to execute and manipulate HTTP Requests.
+    These need to be set by the user in order to get a valid response.
+
+    These parameters are defined in the `parameters` section of this document.
+
+    ### Authorization
+
+    Most endpoints require the user to be authenticated.
+    For this purpose a user must set a password before logging into the ZGW16-IP with their password to obtain an API key, see the `login` endpoint.
+    This API key can then be used to authenticate the user in any other endpoints.
+    The API key is valid for 10 minutes of inactivity, before a new one needs to be requested.
+    There can only be one connection to the device, since there can only be one API key registered at a time.
+  contact:
+    name: ELTAKO GmbH
+    url: 'https://www.eltako.com/en/company/contact/'
+    email: info@eltako.com
+servers:
+  - url: '{protocol}://{host}/api'
+    description: mDNS Device URL
+    variables:
+      protocol:
+        default: http
+        description: Protocol of the URI under which the ZGW16-IP device is addressable.
+      host:
+        default: zgw16-ip.local
+        description: 'mDNS name of the ZGW16-IP device for easy access, default zgw16-ip.local'
+  - url: '{protocol}://{host}/api'
+    description: Ethernet Device URL
+    variables:
+      protocol:
+        default: http
+        description: Protocol of the URI under which the ZGW16-IP device is addressable.
+      host:
+        default: 192.168.5.1
+        description: 'IP address of the ZGW16-IP device, Ethernet default 192.168.5.1'
+  - url: '{protocol}://{host}/api'
+    description: Wifi Device URL (Access Point)
+    variables:
+      protocol:
+        default: http
+        description: Protocol of the URI under which the ZGW16-IP device is addressable via Wifi.
+      host:
+        default: 192.168.4.1
+        description: 'IP address of the ZGW16-IP device, Wifi default 192.168.4.1'
+tags:
+  - name: login
+  - name: password
+  - name: system
+  - name: system/gateway
+  - name: system/time
+  - name: system/network
+  - name: system/mqtt
+  - name: system/update
+  - name: system/reset
+  - name: system/modbus
+  - name: devices
+components:
+  securitySchemes:
+    apikeyAuth:
+      name: accessToken
+      in: header
+      type: apiKey
+      description: Retrieved API key to be used on secured requests for authorization.
+  parameters:
+    deviceIdentifier:
+      name: deviceIdentifier
+      in: path
+      description: A device identifier used to identify a specific device based on the bus address.
+      required: true
+      schema:
+        type: integer
+        default: 1
+        examples:
+          - 1
+    deviceTypeId:
+      name: deviceTypeId
+      in: path
+      description: A device type identifier used to identify a specific device type.
+      required: true
+      schema:
+        type: string
+        description: UUID for device type identifier.
+        format: uuid
+        examples:
+          - 9BE80DF2-9799-467E-9D2C-AC736E8EB6C9
+    registerIdentifier:
+      name: identifier
+      in: query
+      description: The register identifier used to identify a resource such as a characteristic based on the register number in the register table.
+      required: true
+      schema:
+        type: integer
+        examples:
+          - 30073
+          - 30075
+    timeFrame:
+      name: timeFrame
+      in: query
+      description: timeFrame for the device history in days.
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 1095
+        enum:
+          - 1
+          - 14
+          - 365
+          - 1095
+        examples:
+          - 1
+          - 14
+          - 365
+          - 1095
+  headers:
+    ContentType:
+      description: The media type of the resource being sent in the body of the request.
+      schema:
+        type: string
+        examples:
+          - application/json
+          - application/hap+json
+          - application/problem+json
+    ContentLength:
+      description: The length of the content being sent in the body of the request.
+      schema:
+        type: integer
+        example: 328
+  schemas:
+    APIKeyResponse:
+      type: object
+      description: API key that is needed for any other endpoint authentification.
+      properties:
+        login:
+          type: object
+          properties:
+            accessToken:
+              type: string
+              description: API key returned by `/login` POST endpoint.
+              format: uuid
+              example: AF53E6DF-BF94-49AC-A14E-F1F1A05DA17C
+          example:
+            accessToken: AF53E6DF-BF94-49AC-A14E-F1F1A05DA17C
+        example:
+          login:
+            accessToken: AF53E6DF-BF94-49AC-A14E-F1F1A05DA17C
+      example:
+        value:
+          login:
+            accessToken: AF53E6DF-BF94-49AC-A14E-F1F1A05DA17C
+    BinaryData:
+      type: string
+      format: binary
+      description: Binary data for the firmware update
+      examples:
+        - 0x00 0x01 0x02 0x03
+    BaseDevice:
+      type: object
+      description: Base device properties that can be updated by user.
+      properties:
+        friendlyId:
+          type: string
+          description: The friendly ID of the device.
+          maxLength: 16
+          example: Garage
+          x-faker:
+            helpers.arrayElement:
+              - - Appartement 3
+                - Camper 25
+                - MyHouse
+        selectedRTU:
+          type:
+            - array
+            - 'null'
+          items:
+            $ref: '#/components/schemas/SelectedRTU'
+          default: null
+          examples:
+            - - registerId: 30001
+                priority: DEFAULT
+              - registerId: 30005
+                priority: DEFAULT
+        selectedMQTT:
+          type:
+            - array
+            - 'null'
+          items:
+            type: integer
+            x-faker:
+              datatype.number:
+                min: 30001
+                max: 30005
+            examples:
+              - 30001
+          default: null
+          examples:
+            - - 30001
+        selectedHistory:
+          type:
+            - array
+            - 'null'
+          items:
+            type: integer
+            x-faker:
+              datatype.number:
+                min: 30001
+                max: 30005
+            examples:
+              - 30001
+          default: null
+          examples:
+            - - 30001
+      examples:
+        - friendlyId: Garage
+          selectedRTU:
+            - registerId: 30001
+              priority: DEFAULT
+            - registerId: 30005
+              priority: DEFAULT
+          selectedMQTT:
+            - 30005
+          selectedHistory:
+            - 30001
+      title: ''
+    BaseDeviceUpdate:
+      type: object
+      x-stoplight:
+        id: c82b2daa43f7d
+      description: Request schema to update device
+      properties:
+        device:
+          $ref: '#/components/schemas/BaseDevice'
+      examples:
+        - device:
+            friendlyId: Garage
+            selectedRTU:
+              - registerId: 30001
+                priority: DEFAULT
+              - registerId: 30003
+                priority: DEFAULT
+              - registerId: 30005
+                priority: DEFAULT
+            selectedMQTT:
+              - 30001
+              - 30005
+            selectedHistory:
+              - 30001
+              - 30003
+    SelectedRTU:
+      type: object
+      x-stoplight:
+        id: aperz9gf20uex
+      description: Modbus RTU selection per register entry
+      properties:
+        registerId:
+          type: integer
+          description: Register number as defined in register table
+          x-faker:
+            datatype.number:
+              min: 30001
+              max: 30005
+          example: 30001
+        priority:
+          type: string
+          description: Best priority of pulling register via Modbus RTU. The actual time varies based on No. of selected registers and other influences.
+          enum:
+            - LOW
+            - DEFAULT
+            - HIGH
+          default: DEFAULT
+          examples:
+            - DEFAULT
+      examples:
+        - registerId: 30001
+          priority: DEFAULT
+        - registerId: 30005
+          priority: DEFAULT
+    DeviceInfo:
+      type: object
+      description: Device properties displayed based on the bus address.
+      properties:
+        deviceTypeId:
+          type: string
+          format: uuid
+          description: The type of the device.
+          example: 9BE80DF2-9799-467E-9D2C-AC736E8EB6C9
+          readOnly: true
+        busAddress:
+          type: integer
+          description: The bus address of the device.
+          minimum: 1
+          maximum: 128
+          example: 1
+          readOnly: true
+        busType:
+          type: integer
+          description: 'Meter mode, 1 is default for DSZ15DZMOD. See Modbus RTU Protocol Specification for details.'
+          minimum: 1
+          maximum: 128
+          example: 1
+          default: 1
+          readOnly: true
+        manufacturer:
+          type: string
+          description: The manufacturer of the device.
+          example: ELTAKO GmbH
+          default: ELTAKO GmbH
+          readOnly: true
+        firstSeen:
+          type:
+            - string
+            - 'null'
+          description: The first seen timestamp of the device.
+          example: '2023-08-19T11:18:19.744+01:00'
+          format: date-time
+          x-faker:
+            date.between:
+              - '2024-01-01'
+              - '2024-01-02'
+          readOnly: true
+        lastSeen:
+          type:
+            - string
+            - 'null'
+          description: The last seen timestamp of the device.
+          example: '2023-08-19T11:18:19.744+01:00'
+          format: date-time
+          x-faker:
+            date.between:
+              - '2024-01-01'
+              - '2024-01-02'
+          readOnly: true
+      examples:
+        - deviceTypeId: 9BE80DF2-9799-467E-9D2C-AC736E8EB6C9
+          busAddress: 1
+          busType: 1
+          manufacturer: ELTAKO GmbH
+          firstSeen: '2023-08-19T11:11:16.160+01:00'
+          lastSeen: '2023-08-19T11:18:19.744+01:00'
+    Device:
+      type: object
+      description: Device properties displayed based on the bus address.
+      allOf:
+        - $ref: '#/components/schemas/BaseDevice'
+        - $ref: '#/components/schemas/DeviceInfo'
+      examples:
+        - friendlyId: Garage
+          deviceTypeId: 9BE80DF2-9799-467E-9D2C-AC736E8EB6C9
+          busAddress: 1
+          selectedRTU:
+            - registerId: 30001
+              priority: DEFAULT
+            - registerId: 30005
+              priority: DEFAULT
+          selectedMQTT:
+            - 30005
+          selectedHistory:
+            - 30001
+    DeviceUpdate:
+      type: object
+      description: Response schema to update device
+      properties:
+        device:
+          $ref: '#/components/schemas/Device'
+      examples:
+        - device:
+            friendlyId: Garage
+            selectedRTU:
+              - registerId: 30001
+                priority: DEFAULT
+              - registerId: 30003
+                priority: DEFAULT
+              - registerId: 30005
+                priority: DEFAULT
+            selectedMQTT:
+              - 30001
+              - 30005
+            selectedHistory:
+              - 30001
+              - 30003
+    Devices:
+      type: object
+      description: The list of devices.
+      properties:
+        devices:
+          type: array
+          description: Array of devices.
+          items:
+            $ref: '#/components/schemas/Device'
+          examples:
+            - - friendlyId: Garage
+                deviceTypeId: 9BE80DF2-9799-467E-9D2C-AC736E8EB6C9
+                busAddress: 1
+                busType: 1
+                selectedRTU:
+                  - registerId: 30001
+                    priority: DEFAULT
+                  - registerId: 30005
+                    priority: DEFAULT
+                selectedMQTT:
+                  - 30005
+                selectedHistory:
+                  - 30001
+      examples:
+        - devices:
+            - friendlyId: Appartement 3
+              deviceTypeId: 9BE80DF2-9799-467E-9D2C-AC736E8EB6C9
+              busAddress: 2
+              busType: 1
+              selectedRTU:
+                - registerId: 30001
+                  priority: DEFAULT
+                - registerId: 30005
+                  priority: DEFAULT
+              selectedMQTT:
+                - 30005
+              selectedHistory:
+                - 30001
+    DeviceFunction:
+      type: object
+      description: Device function properties.
+      properties:
+        key:
+          type: string
+          description: The key of the function, the register number is used
+          example: '30003'
+          x-faker:
+            helpers.arrayElement:
+              - - '30001'
+                - '30003'
+                - '30005'
+        value:
+          type: number
+          description: The value of the function.
+          example: 1234
+          x-faker:
+            datatype.number:
+              min: -2000
+              max: 10000
+        unit:
+          type: string
+          description: The unit of the function.
+          example: W
+          x-faker:
+            helpers.arrayElement:
+              - - V
+                - A
+                - kW
+                - C
+        timestamp:
+          type: string
+          description: The timestamp of the function.
+          example: '2023-08-19T13:18:19.743+02:00'
+          format: date-time
+          x-faker:
+            date.between:
+              - '2024-01-01'
+              - '2024-01-02'
+      examples:
+        - key: '30003'
+          value: 1234
+          unit: W
+          timestamp: '2023-08-19T13:18:19.743+02:00'
+      x-stoplight:
+        id: l8sn1s5i19df9
+    DeviceFunctions:
+      type: object
+      description: Array of device functions
+      properties:
+        functions:
+          type: array
+          description: Array of device functions
+          items:
+            $ref: '#/components/schemas/DeviceFunction'
+          examples:
+            - - key: '30003'
+                value: 1234
+                unit: W
+                timestamp: '2023-08-19T13:18:19.743+02:00'
+      examples:
+        - functions:
+            - key: '30003'
+              value: 1234
+              unit: W
+              timestamp: '2023-08-19T13:18:19.743+02:00'
+    DeviceExtended:
+      type: object
+      description: Extended device properties.
+      allOf:
+        - $ref: '#/components/schemas/Device'
+        - $ref: '#/components/schemas/DeviceFunctions'
+      examples:
+        - friendlyId: Garage
+          deviceTypeId: 9BE80DF2-9799-467E-9D2C-AC736E8EB6C9
+          busAddress: 1
+          busType: 1
+          selectedRTU:
+            - registerId: 30001
+              priority: DEFAULT
+            - registerId: 30005
+              priority: DEFAULT
+          selectedMQTT:
+            - 30005
+          selectedHistory:
+            - 30001
+          manufacturer: ELTAKO GmbH
+          functions:
+            - key: '30003'
+              value: 1234
+              unit: W
+              timestamp: '2023-08-19T13:18:19.743+02:00'
+          firstSeen: '2023-08-19T11:11:16.160+01:00'
+          lastSeen: '2023-08-19T11:18:19.744+01:00'
+      x-stoplight:
+        id: 8rnb497tfjquf
+    DeviceTypes:
+      type: object
+      description: Array of device types
+      properties:
+        deviceTypes:
+          type: array
+          description: Array of device types
+          items:
+            $ref: '#/components/schemas/DeviceType'
+          examples:
+            - - deviceTypeId: 7f439b45-b3af-424f-9521-3ae00f0ad6d3
+                name: DSZ15MOD
+      examples:
+        - deviceTypes:
+            - deviceTypeId: 7f439b45-b3af-424f-9521-3ae00f0ad6d3
+              name: DSZ15MOD
+    DeviceType:
+      type: object
+      description: Device type properties.
+      properties:
+        deviceTypeId:
+          type: string
+          format: uuid
+          description: Unique identifier for the device type.
+          example: 7f439b45-b3af-424f-9521-3ae00f0ad6d3
+          x-faker: datatype.uuid
+        name:
+          type: string
+          description: Name of the device type.
+          example: DSZ15MOD
+          default: DSZ15DZMOD
+          x-faker:
+            helpers.arrayElement:
+              - - DSZ15MOD
+                - DSZ16MOD
+        manufacturer_reg_number:
+          type: integer
+          description: Modbus RTU register number for the manufacturer.
+          example: 464515
+          default: 464515
+          x-faker: datatype.number
+        meter_type_reg_number:
+          type: integer
+          description: Modbus RTU register number for the meter type.
+          example: 464525
+          default: 464525
+          x-faker: datatype.number
+        serial_no_reg_number:
+          type: integer
+          description: Modbus RTU register number for the serial number.
+          example: 464513
+          default: 464513
+          x-faker: datatype.number
+        identification_registers:
+          type: array
+          description: List of identification registers.
+          items:
+            type: object
+            properties:
+              register_number:
+                type: integer
+                description: Modbus RTU register number.
+                examples:
+                  - 464515
+                x-faker: datatype.number
+              value:
+                type: array
+                description: List of values associated with the register.
+                items:
+                  type: integer
+                  example: 13
+                example:
+                  - 13
+                x-faker: helpers.arrayElements
+            examples:
+              - register_number: 464515
+                value:
+                  - 13
+          examples:
+            - - register_number: 464515
+                value:
+                  - 13
+        default_RTU_registers:
+          type: array
+          description: List of default RTU registers.
+          items:
+            type: integer
+            example: 30001
+          example:
+            - 30001
+            - 30003
+          x-faker: helpers.arrayElements
+        default_MQTT_registers:
+          type: array
+          description: List of default MQTT registers.
+          items:
+            type: integer
+            example: 30001
+          example:
+            - 30001
+          x-faker: helpers.arrayElements
+        default_history_registers:
+          type: array
+          description: List of default history registers.
+          items:
+            type: integer
+            example: 30053
+          example:
+            - 30053
+            - 30073
+            - 30075
+          x-faker: helpers.arrayElements
+        registers:
+          type: array
+          description: List of register definitions.
+          items:
+            $ref: '#/components/schemas/RegisterDefinition'
+          example:
+            - number: 30001
+              scaling_factor: 100
+              description: [ { en: Voltage of L1 to N }, { de: Spannung von L1 zu N } ]
+              unit: Volt
+              reg_type: MB_PARAM_INPUT
+              address: 0
+              length: 2
+              dataType: PARAM_TYPE_U32
+              data_size: PARAM_SIZE_U32
+              readwrite: PAR_PERMS_READ_WRITE_TRIGGER
+      examples:
+        - deviceTypeId: 7f439b45-b3af-424f-9521-3ae00f0ad6d3
+          name: DSZ15MOD
+          manufacturer_reg_number: 464515
+          meter_type_reg_number: 464525
+          serial_no_reg_number: 464513
+          identification_registers:
+            - register_number: 464515
+              value:
+                - 13
+            - register_number: 464525
+              value:
+                - 1
+                - 2
+                - 3
+                - 4
+                - 5
+            - register_number: 464513
+          default_RTU_registers:
+            - 30001
+            - 30003
+          default_MQTT_registers: []
+          default_history_registers:
+            - 30053
+            - 30073
+            - 30075
+          registers:
+            - number: 30001
+              scaling_factor: 100
+              description: [ { en: Voltage of L1 to N }, { de: Spannung von L1 zu N } ]
+              unit: Volt
+              reg_type: MB_PARAM_INPUT
+              address: 0
+              length: 2
+              dataType: PARAM_TYPE_U32
+              data_size: PARAM_SIZE_U32
+              readwrite: PAR_PERMS_READ_WRITE_TRIGGER
+    RegisterDefinition:
+      type: object
+      description: Modbus register table definition.
+      properties:
+        number:
+          type: integer
+          description: The register number
+          example: 30001
+          x-faker:
+            datatype.number:
+              min: 30001
+              max: 30005
+        scaling_factor:
+          type: integer
+          description: The scaling factor applied to the register value.
+          example: 100
+          x-faker:
+            helpers.arrayElement:
+              - - 1
+                - 10
+                - 100
+        description:
+          type: array
+          description: List of localized register definitions.
+          items:
+            type: object
+            additionalProperties:
+              type: string
+              example: en
+            example:
+              en: Voltage of L1 to N
+          example:
+            - en: Voltage of L1 to N
+            - de: Spannung von L1 zu N
+          x-faker:
+            helpers.arrayElements:
+              - - en: Voltage of L1 to N
+                  de: Spannung von L1 zu N
+                - en: Current of L1
+                  de: Strom von L1
+        unit:
+          type: string
+          description: Unit of the register
+          example: V
+          x-faker:
+            helpers.arrayElement:
+              - - V
+                - A
+                - kW
+                - C
+        reg_type:
+          type: string
+          description: Type of the register.
+          example: MB_PARAM_INPUT
+          x-faker:
+            helpers.arrayElement:
+              - - MB_PARAM_INPUT
+                - MB_PARAM_HOLDING
+        dataType:
+          type: string
+          description: Data type of the register
+          example: uint32
+          x-faker:
+            helpers.arrayElement:
+              - - uint32
+                - float32
+                - boolean
+        dataFormat:
+          type: string
+          description: Data format of the register
+          example: XXXXXXXX
+          x-faker:
+            helpers.arrayElement:
+              - - XXXXXXXX
+                - '00000000'
+                - 000000NN
+                - NNNNNNNN
+                - 0000000D
+                - '00000002'
+        length:
+          type: integer
+          description: Length of the register in bytes
+          example: 4
+          x-faker:
+            datatype.number:
+              min: 1
+              max: 4
+        address:
+          type: integer
+          description: Start address of the register
+          example: 4
+          x-faker:
+            helpers.arrayElement:
+              - - 0
+                - 2
+                - 4
+        data_size:
+          type: string
+          description: Data size of the register.
+          example: PARAM_SIZE_U32
+          x-faker:
+            helpers.arrayElement:
+              - - PARAM_SIZE_U32
+                - PARAM_SIZE_U16
+        readwrite:
+          type: string
+          description: Read and/or write permission of the register
+          example: PAR_PERMS_READ_WRITE_TRIGGER
+          x-faker:
+            helpers.arrayElement:
+              - - PAR_PERMS_READ_WRITE_TRIGGER
+                - PAR_PERMS_READ_ONLY
+      examples:
+        - number: 30001
+          scaling_factor: 100
+          description: [ { en: Voltage of L1 to N }, { de: Spannung von L1 zu N } ]
+          unit: Volt
+          reg_type: MB_PARAM_INPUT
+          address: 0
+          length: 2
+          dataType: PARAM_TYPE_U32
+          data_size: PARAM_SIZE_U32
+          readwrite: PAR_PERMS_READ_WRITE_TRIGGER
+    LoginCredentials:
+      type: object
+      description: User defined password used to login.
+      properties:
+        login:
+          type: object
+          properties:
+            password:
+              description: User defined password.
+              type: string
+              default: <THIS_IS_MY_PASSWORD>
+              example: THIS_IS_MY_PASSWORD
+          examples:
+            - password: THIS_IS_MY_PASSWORD
+      examples:
+        - login:
+            password: <THIS_IS_MY_PASSWORD>
+      x-stoplight:
+        id: xu79ttv3mudg1
+    BaseGateway:
+      type: object
+      description: Base gateway properties.
+      properties:
+        name:
+          type: string
+          maxLength: 100
+          description: The name of the gateway.
+          example: ZGW16WL-IP
+      examples:
+        - name: ZGW16WL-IP
+    Gateway:
+      type: object
+      description: Gateway properties.
+      allOf:
+        - $ref: '#/components/schemas/BaseGateway'
+      properties:
+        type:
+          type: string
+          description: The type of the gateway.
+          example: ZGW16WL-IP
+          readOnly: true
+        version:
+          type: string
+          description: The version of the gateway.
+          example: 0.0.0
+          x-faker: system.semver
+          readOnly: true
+        serialNumber:
+          type: string
+          description: The serial number of the gateway.
+          x-faker: datatype.uuid
+          example: ABCDEF12-9799-467E-9D2C-AJ736E8EB612
+          readOnly: true
+      examples:
+        - name: ZGW16WL-IP
+          type: ZGW16WL-IP
+          version: 0.0.0
+          serialNumber: ABCDEF12-9799-467E-9D2C-AJ736E8EB612
+    Time:
+      type: object
+      description: Time properties.
+      properties:
+        time:
+          type: string
+          description: The current time.
+          example: '2023-11-09T16:54:25.375+01:00'
+          format: date-time
+          x-faker:
+            date.between:
+              - '2024-01-01'
+              - '2024-01-02'
+        ntpState:
+          type: string
+          description: The state of the Network Time Protocol.
+          default: inactive
+          enum:
+            - active
+            - inactive
+            - failed
+          examples:
+            - active
+            - inactive
+            - failed
+        ntpUri:
+          type: string
+          description: The URI of the Network Time Protocol server.
+          example: pool.ntp.org
+          x-faker: url
+        timeZone:
+          type: string
+          description: The current time zone.
+          example: 'CET-1CEST,M3.4.0,M10.5.0/3'
+      examples:
+        - time: '2023-11-09T16:54:25.375+01:00'
+          ntpState: active
+          ntpUri: pool.ntp.org
+          timeZone: 'CET-1CEST,M3.4.0,M10.5.0/3'
+    Ethernet:
+      type: object
+      description: Ethernet properties.
+      properties:
+        state:
+          type: string
+          description: The state of the ethernet connection.
+          example: active
+          default: inactive
+          enum:
+            - active
+            - inactive
+        dhcpClient:
+          type: string
+          description: The state of the DHCP client (ethernet).
+          example: active
+          default: inactive
+          enum:
+            - active
+            - inactive
+        ip:
+          type: string
+          description: The IP address of the ethernet connection.
+          example: 192.168.188.115
+          format: ipv4
+        subnetMask:
+          type: string
+          description: The subnet mask of the ethernet connection.
+          example: 255.255.255.0
+          format: ipv4
+        standardGateway:
+          type: string
+          description: The standard gateway of the ethernet connection.
+          example: 192.168.188.1
+          format: ipv4
+        dnsMain:
+          type: string
+          description: The main DNS server of the ethernet connection.
+          example: 192.168.4.254
+          format: ipv4
+        dnsBackup:
+          type: string
+          description: The backup DNS server of the ethernet connection.
+          example: 192.168.4.254
+          format: ipv4
+      examples:
+        - state: active
+          dhcpClient: active
+          ip: 192.168.4.1
+    AccessPoint:
+      type: object
+      description: Access point properties.
+      properties:
+        ssid:
+          type: string
+          description: The SSID of the access point.
+          example: ELTAKO-ZGW16-IP
+        password:
+          type: string
+          description: The password of the access point.
+          example: configured
+        ip:
+          type: string
+          description: The IP address of the access point.
+          example: 192.168.4.1
+          format: ipv4
+        subnetMask:
+          type: string
+          description: The subnet mask of the access point.
+          example: 255.255.255.0
+          format: ipv4
+        dhcpStartAddress:
+          type: string
+          description: The start address of the DHCP range.
+          example: 192.168.4.2
+          format: ipv4
+        dhcpEndAddress:
+          type: string
+          description: The end address of the DHCP range.
+          example: 192.168.4.10
+          format: ipv4
+      examples:
+        - ssid: ELTAKO-ZGW16-IP
+          password: configured
+          ip: 192.168.4.10
+    Station:
+      type: object
+      description: Station properties.
+      properties:
+        ssid:
+          type: string
+          description: The SSID of the station.
+          example: uuid
+        password:
+          type: string
+          description: The password of the station.
+          example: unconfigured
+          x-faker:
+            helpers.arrayElement:
+              - - configured
+                - unconfigured
+        dhcpClient:
+          type: string
+          description: The state of the DHCP client (station).
+          example: inactive
+          default: inactive
+          enum:
+            - active
+            - inactive
+        ip:
+          type: string
+          description: The IP address of the station.
+          example: 192.168.4.1
+          format: ipv4
+        subnetMask:
+          type: string
+          description: The subnet mask of the station.
+          example: 255.255.255.0
+          format: ipv4
+        standardGateway:
+          type: string
+          description: The standard gateway of the station.
+          example: 192.168.4.254
+          format: ipv4
+        dnsMain:
+          type: string
+          description: The main DNS server of the station.
+          example: 192.168.4.254
+          format: ipv4
+        dnsBackup:
+          type: string
+          description: The backup DNS server of the station.
+          example: 192.168.4.254
+          format: ipv4
+      examples:
+        - ssid: uuid
+          password: unconfigured
+          dhcpClient: inactive
+          ip: 192.168.4.2
+    Wlan:
+      type: object
+      description: WLAN properties.
+      properties:
+        state:
+          type: string
+          description: The state of the WLAN connection.
+          example: active
+          default: inactive
+          enum:
+            - active
+            - inactive
+        mode:
+          type: string
+          description: The mode of the WLAN connection.
+          default: accessPoint
+          enum:
+            - accessPoint
+            - station
+          example: accessPoint
+        accessPoint:
+          $ref: '#/components/schemas/AccessPoint'
+        station:
+          $ref: '#/components/schemas/Station'
+      examples:
+        - state: active
+          mode: accessPoint
+          accessPoint:
+            ssid: ELTAKO-ZGW16-IP
+            password: configured
+            ip: 192.168.4.2
+    Network:
+      type: object
+      description: Network properties for ethernet and wlan.
+      properties:
+        ethernet:
+          $ref: '#/components/schemas/Ethernet'
+        wlan:
+          $ref: '#/components/schemas/Wlan'
+      examples:
+        - ethernet:
+            state: active
+            dhcpClient: active
+            ip: 192.168.4.3
+          wlan:
+            state: active
+            mode: accessPoint
+            accessPoint:
+              ssid: ELTAKO-ZGW16-IP
+              password: configured
+              ip: 192.168.4.4
+    BaseMqtt:
+      type: object
+      description: Updateable MQTT parameters.
+      properties:
+        enabled:
+          type: boolean
+          description: Enable or disable MQTT Connection
+          example: true
+        brokerUri:
+          type: string
+          description: The URI of the MQTT broker.
+          format: uri
+          default: 'mqtt://127.0.0.1'
+          example: 'mqtt://127.0.0.1'
+        brokerPort:
+          type: integer
+          description: The port of the MQTT broker. Default is 1883, 8883 for SSL.
+          example: 8883
+          default: 1883
+          min: 1
+          max: 9999
+        user:
+          type:
+            - string
+            - 'null'
+          description: The user for the MQTT connection.
+          example: thisIsMe
+          x-faker: internet.userName
+        password:
+          type:
+            - string
+            - 'null'
+          description: 'The password for the MQTT connection. PUT request must be actual password, response is only status.'
+          example: unconfigured
+          default: unconfigured
+        certificate:
+          type:
+            - string
+            - 'null'
+          description: 'The broker certificate for the MQTT connection. PUT request must be actual certificate, response is only status. This field is required with PUT if port is 8883. (SSL)'
+          example: unconfigured
+          default: unconfigured
+        topicStart:
+          type: string
+          description: The start topic for the MQTT connection.
+          example: ZGW16-IP
+        homeassistantDiscoveryEnabled:
+          type: boolean
+          description: Flag if device should emit homeassistant discovery messages.
+          example: false
+          default: false
+      examples:
+        - brokerUri: 'mqtt://127.0.0.1'
+          brokerPort: 8883
+          user: thisIsMe
+          password: unconfigured
+          certificate: unconfigured
+          topicStart: ZGW16-IP
+          homeassistantDiscoveryEnabled: false
+    Mqtt:
+      type: object
+      description: All MQTT parameters.
+      allOf:
+        - $ref: '#/components/schemas/BaseMqtt'
+      properties:
+        clientId:
+          type: string
+          description: The client ID for the MQTT connection.
+          example: 9BE80DF2-9799-467E-9D2C-AC736E8EB6C9
+          format: uuid
+          readOnly: true
+        isConnected:
+          type: boolean
+          description: The connection status of the MQTT connection.
+          example: false
+          readOnly: true
+      examples:
+        - brokerUri: 'mqtt://127.0.0.1'
+          brokerPort: 8883
+          user: thisIsMe
+          password: unconfigured
+          certificate: unconfigured
+          topicStart: ZGW16-IP
+          clientId: 9BE80DF2-9799-467E-9D2C-AC736E8EB6C9
+          isConnected: false
+    ClientMqtt:
+      type: object
+      description: Updateable Client MQTT parameters.
+      properties:
+        certificate:
+          type:
+            - string
+            - 'null'
+          description: The client certificate for the MQTT connection.
+          example: unconfigured
+          default: unconfigured
+        key:
+          type:
+            - string
+            - 'null'
+          description: The client key for the MQTT connection.
+          example: unconfigured
+          default: unconfigured
+        password:
+          type:
+            - string
+            - 'null'
+          description: The client key password for the MQTT connection.
+          example: unconfigured
+          default: unconfigured
+      examples:
+        - certificate: '-----BEGIN CERTIFICATE----- VERY_LONG_STRING_HERE -----END CERTIFICATE-----'
+          key: '-----BEGIN PRIVATE KEY----- VERY_LONG_STRING_HERE -----END PRIVATE KEY-----'
+          password: test_cert
+        - certificate: unconfigured
+          key: unconfigured
+          password: unconfigured
+    System:
+      type: object
+      description: System properties.
+      properties:
+        gateway:
+          $ref: '#/components/schemas/Gateway'
+        time:
+          $ref: '#/components/schemas/Time'
+        network:
+          $ref: '#/components/schemas/Network'
+        mqtt:
+          $ref: '#/components/schemas/Mqtt'
+      examples:
+        - gateway: {}
+      x-stoplight:
+        id: c9ul99c1bz673
+    WLANStation:
+      type: object
+      description: WLAN station properties.
+      properties:
+        ssid:
+          type: string
+          description: The SSID of the wlan station.
+          example: Funkbereich II
+          readOnly: true
+        rssi:
+          type: integer
+          description: The Received Signal Strength Indicator (RSSI) of the station.
+          example: -44
+          min: -255
+          max: 0
+          readOnly: true
+        channel:
+          type: integer
+          description: The channel of the station.
+          example: 1
+          min: 0
+          max: 1000
+          readOnly: true
+      examples:
+        - ssid: Funkbereich II
+          rssi: -44
+          channel: 1
+      x-stoplight:
+        id: ylem62294jw6s
+    WLANStations:
+      type: object
+      description: List of WLAN stations.
+      properties:
+        stations:
+          type: array
+          description: The list of stations.
+          items:
+            $ref: '#/components/schemas/WLANStation'
+          example:
+            - ssid: Funkbereich II
+              rssi: -44
+              channel: 1
+            - ssid: Funkbereich G
+              rssi: -46
+              channel: 1
+      examples:
+        - stations:
+            - {}
+      x-stoplight:
+        id: hpx0oelaqw122
+    PasswordItem:
+      type: object
+      description: Password that is defined by the user.
+      properties:
+        password:
+          type: object
+          properties:
+            password:
+              description: Password defined by user
+              type: string
+              default: <very_secure_password>
+              example: <very_secure_password>
+          example:
+            password: <very_secure_password>
+      examples:
+        - password:
+            password: <very_secure_password>
+    PasswordResponse:
+      type: object
+      description: Password configuration status.
+      properties:
+        password:
+          type: object
+          properties:
+            password:
+              description: Password configuration status
+              type: string
+              default: unconfigured
+              enum:
+                - configured
+                - unconfigured
+              examples:
+                - configured
+                - unconfigured
+          example:
+            password: unconfigured
+      examples:
+        - password:
+            password: unconfigured
+      x-stoplight:
+        id: ry9idb7bf6e6x
+    ResponseItem:
+      type: object
+      description: Generic response item for status and error messages.
+      properties:
+        title:
+          type: string
+          description: Status / Error title
+          readOnly: true
+          examples:
+            - Bad Request
+            - Unauthorized
+            - OK
+        status:
+          type: integer
+          description: HTTP status code
+          readOnly: true
+          examples:
+            - 400
+            - 401
+            - 200
+        detail:
+          type: string
+          description: Detail message
+          readOnly: true
+          examples:
+            - The request could not be understood by the server due to malformed syntax.
+            - The request requires user authentication.
+            - The request was successful.
+        instance:
+          type: string
+          description: Instance URI
+          readOnly: true
+          examples:
+            - /api/password
+            - /api/login
+            - /api/system
+      examples:
+        - title: Bad Request
+          status: 400
+          detail: The request could not be understood by the server due to malformed syntax.
+          instance: /api/password
+    ModbusRTU:
+      type: object
+      description: Modbus RTU properties.
+      properties:
+        baudrate:
+          type: integer
+          description: Modbus baud rate in milliseconds
+          example: 9600
+          x-faker:
+            helpers.arrayElement:
+              - - 9600
+                - 19200
+                - 75
+                - 115200
+        parity:
+          type: string
+          description: Modbus parity
+          enum:
+            - none
+            - even
+            - odd
+          examples:
+            - none
+            - even
+            - odd
+        timeout:
+          type: integer
+          description: Modbus timeout in milliseconds
+          example: 100
+          min: 0
+          max: 10000
+          x-faker:
+            helpers.arrayElement:
+              - - 50
+                - 100
+                - 250
+                - 500
+                - 1000
+                - 5000
+        busScanActive:
+          type: boolean
+          description: Indicates if firmware is running a bus scan
+          example: true
+          readOnly: true
+      examples:
+        - baudrate: 9600
+          parity: none
+          timeout: 100
+          busScanActive: false
+    ModbusTCP:
+      type: object
+      description: Modbus TCP properties.
+      properties:
+        enabled:
+          type: boolean
+          description: Enable or disable Modbus TCP server
+          example: true
+        port:
+          type: integer
+          description: Port the Modbus server listens on
+          example: 502
+      examples:
+        - enabled: true
+          port: 502
+      x-stoplight:
+        id: 4tkdopmt7vi61
+    DataPoint:
+      type: object
+      description: Data point properties.
+      properties:
+        timestamp:
+          type: string
+          description: The timestamp of the data point.
+          example: '2023-08-19T13:18:19.743+02:00'
+          format: date-time
+          x-faker:
+            date.between:
+              - '2024-01-01'
+              - '2024-01-02'
+        value:
+          type: number
+          description: The value of the data point.
+          example: 25.6
+          x-faker:
+            datatype.number:
+              precision: 0.1
+              min: -1000
+              max: 1000
+      examples:
+        - timestamp: '2023-08-19T13:18:19.743+02:00'
+          value: 25.6
+    DeviceHistory:
+      type: object
+      description: Device history.
+      properties:
+        identifier:
+          type: integer
+          description: The data identifier.
+          examples:
+            - 30073
+            - 30075
+          x-faker:
+            helpers.arrayElement:
+              - - 30073
+                - 30075
+        values:
+          type: array
+          items:
+            $ref: '#/components/schemas/DataPoint'
+          examples:
+            - - timestamp: '2023-08-19T13:18:19.743+02:00'
+                value: 25.6
+              - timestamp: '2023-08-19T13:18:19.743+02:00'
+                value: 25.6
+      examples:
+        - identifier: 30073
+          values:
+            - timestamp: '2023-08-19T13:18:19.743+02:00'
+              value: 25.6
+  responses:
+    BadRequest:
+      description: Bad Request
+      headers:
+        Content-Type:
+          $ref: '#/components/headers/ContentType'
+        Content-Length:
+          $ref: '#/components/headers/ContentLength'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ResponseItem'
+          examples:
+            bad_request:
+              value:
+                title: Bad Request
+                status: 400
+                detail: Bad request. The request message was structured incorrectly.
+                instance: /api/v0/devices/abcdef12-3456-7890-abcd-ef1234567890
+    OK:
+      description: OK
+      headers:
+        Content-Type:
+          $ref: '#/components/headers/ContentType'
+        Content-Length:
+          $ref: '#/components/headers/ContentLength'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ResponseItem'
+          examples:
+            ok:
+              value:
+                title: OK
+                status: 200
+                detail: The request was successful.
+                instance: /api/v0/devices/abcdef12-3456-7890-abcd-ef1234567890
+    Unauthorized:
+      description: Unauthorized
+      headers:
+        Content-Type:
+          $ref: '#/components/headers/ContentType'
+        Content-Length:
+          $ref: '#/components/headers/ContentLength'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ResponseItem'
+          examples:
+            unauthorized:
+              value:
+                title: Unauthorized
+                status: 401
+                detail: The request requires user authentication.
+                instance: /api/v0/devices/abcdef12-3456-7890-abcd-ef1234567890
+    NotFound:
+      description: Not Found
+      headers:
+        Content-Type:
+          $ref: '#/components/headers/ContentType'
+        Content-Length:
+          $ref: '#/components/headers/ContentLength'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ResponseItem'
+          examples:
+            not_found:
+              value:
+                title: Not Found
+                status: 404
+                detail: Requested deviceIdentifier not found.
+                instance: /api/v0/devices/abcdef12-3456-7890-abcd-ef1234567890
+    NotAllowed:
+      description: Method not allowed
+      headers:
+        Content-Type:
+          $ref: '#/components/headers/ContentType'
+        Content-Length:
+          $ref: '#/components/headers/ContentLength'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ResponseItem'
+          examples:
+            not_allowed:
+              value:
+                title: Method Not Allowed
+                status: 405
+                detail: Method not allowed. The request method is not supported for the requested resource.
+                instance: /api/v0/devices/abcdef12-3456-7890-abcd-ef1234567890
+paths:
+  /login:
+    post:
+      tags:
+        - login
+      operationId: login_post
+      summary: login
+      description: |-
+        For security reasons, most endpoints require an API key for authorization.
+
+        Each API key is valid for 15 minutes before a new login is required.
+
+        To create an API key, the user defined password needs to be set using the `/password` PUT endpoint.
+        The given password is then used to aquire the API key.
+
+        After a successful login, it returns the API Key called `accessToken` in the format of a UUID.
+        This API key MUST be added to the Authentication Header of each request to authenticate the requesting user (`accessToken` as the key and the UUID string as the value).
+      requestBody:
+        description: User defined password used to login and retrieve access token (API key).
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginCredentials'
+            examples:
+              Login:
+                value:
+                  login:
+                    password: THIS_IS_MY_PASSWORD
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIKeyResponse'
+              examples:
+                valid_password:
+                  value:
+                    accessToken: 9BE80DF2-9799-467E-9D2C-AC736E8EB6C9
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      parameters: []
+  /password:
+    get:
+      tags:
+        - password
+      operationId: password_get
+      summary: get password
+      description: |-
+        See if password is set by the user (configured) or not (unconfigured).
+
+        If the password is unconfigured, use the `/password` PUT endpoint.
+      responses:
+        '200':
+          description: OK
+          headers:
+            Content-Type:
+              $ref: '#/components/headers/ContentType'
+            Content-Length:
+              $ref: '#/components/headers/ContentLength'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PasswordResponse'
+              examples:
+                Example 1:
+                  value:
+                    password:
+                      password: configured
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    put:
+      tags:
+        - password
+      operationId: password_put
+      summary: Set & update password
+      description: |-
+        This endpoint is used to set and update a user defined password.
+
+        The password is required to generate an API key.
+
+        For more detail please have a look at the `/login` POST endpoint.
+      requestBody:
+        description: Set user defined password.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordItem'
+            examples:
+              Set Password:
+                value:
+                  password:
+                    password: abcdefghij12345!
+      responses:
+        '200':
+          description: OK
+          headers:
+            Content-Type:
+              $ref: '#/components/headers/ContentType'
+            Content-Length:
+              $ref: '#/components/headers/ContentLength'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PasswordResponse'
+              examples:
+                Password is set:
+                  value:
+                    password:
+                      password: configured
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /system:
+    get:
+      tags:
+        - system
+      operationId: system_get
+      summary: get system information
+      description: Get system information to get current state of system.
+      security:
+        - apikeyAuth: []
+      responses:
+        '200':
+          description: OK
+          headers:
+            Content-Type:
+              $ref: '#/components/headers/ContentType'
+            Content-Length:
+              $ref: '#/components/headers/ContentLength'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/System'
+              examples:
+                Example 1:
+                  value:
+                    gateway:
+                      type: ZGW16WL-IP
+                      name: ZGW16WL-IP
+                      version: 0.0.0
+                      serialNumber: ABCDEF12-9799-467E-9D2C-AJ736E8EB612
+                    time:
+                      time: '2023-11-09T16:54:25.375+01:00'
+                      ntpState: inactive
+                      ntpUri: pool.ntp.org
+                      timeZone: 'CET-1CEST,M3.4.0,M10.5.0/3'
+                    network:
+                      ethernet:
+                        state: active
+                        dhcpClient: active
+                        ip: 192.168.8.34
+    post:
+      tags:
+        - system
+      summary: trigger device reboot
+      operationId: system_post
+      responses:
+        '200':
+          description: OK
+      description: 'Reboots the device after a short delay  '
+  /system/gateway:
+    get:
+      tags:
+        - system/gateway
+      operationId: system_gateway_get
+      summary: get system gateway information
+      description: Get system gateway information.
+      security:
+        - apikeyAuth: []
+      responses:
+        '200':
+          description: OK
+          headers:
+            Content-Type:
+              $ref: '#/components/headers/ContentType'
+            Content-Length:
+              $ref: '#/components/headers/ContentLength'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  gateway:
+                    $ref: '#/components/schemas/Gateway'
+              examples:
+                Example 1:
+                  value:
+                    type: ZGW16WL-IP
+                    name: ZGW16WL-IP
+                    version: 0.0.0
+                    serialNumber: ABCDEF12-9799-467E-9D2C-AJ736E8EB612
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    put:
+      tags:
+        - system/gateway
+      operationId: system_gateway_put
+      summary: update system gateway information
+      description: Update system gateway information.
+      security:
+        - apikeyAuth: []
+      requestBody:
+        description: Update gateway name.
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                gateway:
+                  $ref: '#/components/schemas/BaseGateway'
+            examples:
+              example:
+                value:
+                  gateway:
+                    name: NEW_GATEWAY_NAME
+      responses:
+        '200':
+          description: OK
+          headers:
+            Content-Type:
+              $ref: '#/components/headers/ContentType'
+            Content-Length:
+              $ref: '#/components/headers/ContentLength'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  gateway:
+                    $ref: '#/components/schemas/Gateway'
+              examples:
+                Example 1:
+                  value:
+                    type: ZGW16WL-IP
+                    name: NEW_GATEWAY_NAME
+                    version: 0.0.0
+                    serialNumber: ABCDEF12-9799-467E-9D2C-AJ736E8EB612
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /system/time:
+    get:
+      tags:
+        - system/time
+      operationId: system_time_get
+      summary: get system time
+      description: Get system time information.
+      security:
+        - apikeyAuth: []
+      responses:
+        '200':
+          description: OK
+          headers:
+            Content-Type:
+              $ref: '#/components/headers/ContentType'
+            Content-Length:
+              $ref: '#/components/headers/ContentLength'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  time:
+                    $ref: '#/components/schemas/Time'
+              examples:
+                Example 1:
+                  value:
+                    time:
+                      time: '2023-11-09T16:54:25.375+01:00'
+                      ntpState: inactive
+                      ntpUri: pool.ntp.org
+                      timeZone: 'CET-1CEST,M3.4.0,M10.5.0/3'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    put:
+      tags:
+        - system/time
+      operationId: system_time_put
+      summary: update system time
+      description: Update system time information.
+      security:
+        - apikeyAuth: []
+      requestBody:
+        description: Update system parameters.
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                time:
+                  $ref: '#/components/schemas/Time'
+            examples:
+              Update all:
+                value:
+                  time:
+                    time: '2023-11-09T16:54:25.375+01:00'
+                    ntpState: inactive
+                    ntpUri: pool.ntp.org
+                    timeZone: 'CET-1CEST,M3.4.0,M10.5.0/3'
+              Activate NTP:
+                value:
+                  time:
+                    ntpState: active
+              Deactivate NTP:
+                value:
+                  time:
+                    ntpState: inactive
+              Set time:
+                value:
+                  time:
+                    time: '2024-02-09T16:54:25.375+01:00'
+              Set timezone:
+                value:
+                  time:
+                    timeZone: 'CET-1CEST,M3.4.0,M10.5.0/3'
+      responses:
+        '200':
+          description: OK
+          headers:
+            Content-Type:
+              $ref: '#/components/headers/ContentType'
+            Content-Length:
+              $ref: '#/components/headers/ContentLength'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  time:
+                    $ref: '#/components/schemas/Time'
+              examples:
+                Example 1:
+                  value:
+                    time:
+                      time: '2023-11-09T16:54:25.375+01:00'
+                      ntpState: inactive
+                      ntpUri: pool.ntp.org
+                      timeZone: 'CET-1CEST,M3.4.0,M10.5.0/3'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /system/network:
+    get:
+      tags:
+        - system/network
+      operationId: system_network_get
+      summary: WLAN - get network information
+      description: WLAN - get network information
+      security:
+        - apikeyAuth: []
+      responses:
+        '200':
+          description: OK
+          headers:
+            Content-Type:
+              $ref: '#/components/headers/ContentType'
+            Content-Length:
+              $ref: '#/components/headers/ContentLength'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  network:
+                    $ref: '#/components/schemas/Network'
+              examples:
+                Get all:
+                  value:
+                    network:
+                      ethernet:
+                        state: active
+                        dhcpClient: active
+                        ip: 192.168.188.115
+                        subnetMask: 255.255.255.0
+                        standardGateway: 192.168.188.1
+                        dnsMain: 192.168.4.254
+                        dnsBackup: 192.168.4.254
+                      wlan:
+                        state: active
+                        mode: accessPoint
+                        accessPoint:
+                          ssid: ELTAKO-ZGW16-IP
+                          password: configured
+                          ip: 192.168.4.1
+                          subnetMask: 255.255.255.0
+                          dhcpStartAddress: 192.168.4.2
+                          dhcpEndAddress: 192.168.4.10
+                        station:
+                          ssid: ''
+                          password: unconfigured
+                          dhcpClient: inactive
+                          ip: 192.168.4.1
+                          subnetMask: 255.255.255.0
+                          standardGateway: 192.168.4.254
+                          dnsMain: 192.168.4.254
+                          dnsBackup: 192.168.4.254
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    put:
+      tags:
+        - system/network
+      operationId: system_network_put
+      summary: WLAN - configure static ip for station mode
+      description: WLAN - configure static ip for station mode
+      security:
+        - apikeyAuth: []
+      requestBody:
+        description: Update network parameters.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Network'
+            examples:
+              Ethernet - enable:
+                value:
+                  network:
+                    ethernet:
+                      state: active
+              Ethernet - disable:
+                value:
+                  network:
+                    ethernet:
+                      state: inactive
+              Ethernet - enable DHCP:
+                value:
+                  network:
+                    ethernet:
+                      dhcpClient: active
+              Ethernet - disable DHCP:
+                value:
+                  network:
+                    ethernet:
+                      dhcpClient: inactive
+      responses:
+        '200':
+          description: OK
+          headers:
+            Content-Type:
+              $ref: '#/components/headers/ContentType'
+            Content-Length:
+              $ref: '#/components/headers/ContentLength'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  network:
+                    $ref: '#/components/schemas/Network'
+              examples:
+                Ethernet - enable:
+                  value:
+                    network:
+                      ethernet:
+                        state: active
+                Ethernet - disable:
+                  value:
+                    network:
+                      ethernet:
+                        state: inactive
+                Ethernet - enable DHCP:
+                  value:
+                    network:
+                      ethernet:
+                        dhcpClient: active
+                Ethernet - disable DHCP:
+                  value:
+                    network:
+                      ethernet:
+                        dhcpClient: inactive
+                Ethernet - set static IP:
+                  value:
+                    network:
+                      ethernet:
+                        ip: 192.168.5.1
+                        subnetMask: 255.255.255.0
+                        standardGateway: 192.168.5.254
+                        dnsMain: 192.168.5.254
+                        dnsBackup: 192.168.5.254
+                WLAN - enable:
+                  value:
+                    network:
+                      wlan:
+                        state: active
+                WLAN - disable:
+                  value:
+                    network:
+                      wlan:
+                        state: inactive
+                WLAN - set ssid and password for station mode:
+                  value:
+                    network:
+                      wlan:
+                        station:
+                          ssid: my_network
+                          password: my_password
+                WLAN - switch mode to station:
+                  value:
+                    network:
+                      wlan:
+                        mode: station
+                WLAN - enable dhcp for station mode:
+                  value:
+                    network:
+                      wlan:
+                        station:
+                          dhcpClient: active
+                WLAN - disable dhcp for station mode:
+                  value:
+                    network:
+                      wlan:
+                        station:
+                          dhcpClient: inactive
+                WLAN - configure static ip for station mode:
+                  value:
+                    network:
+                      wlan:
+                        station:
+                          ip: 192.168.4.1
+                          subnetMask: 255.255.255.0
+                          standardGateway: 192.168.4.254
+                          dnsMain: 192.168.4.254
+                          dnsBackup: 192.168.4.254
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /system/network/wifiscan:
+    get:
+      tags:
+        - system/network
+      operationId: system_network_wifi_get
+      summary: WLAN - get network scan information
+      description: WLAN - get network scan information.
+      security:
+        - apikeyAuth: []
+      responses:
+        '200':
+          description: OK
+          headers:
+            Content-Type:
+              $ref: '#/components/headers/ContentType'
+            Content-Length:
+              $ref: '#/components/headers/ContentLength'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WLANStations'
+              examples:
+                Scan:
+                  value:
+                    stations:
+                      - ssid: Network II
+                        rssi: -44
+                        channel: 1
+                      - ssid: AwesomeNetworkHere
+                        rssi: -46
+                        channel: 1
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /system/mqtt:
+    get:
+      tags:
+        - system/mqtt
+      operationId: system_mqtt_get
+      summary: get MQTT configuration
+      description: Get MQTT configuration.
+      security:
+        - apikeyAuth: []
+      responses:
+        '200':
+          description: OK
+          headers:
+            Content-Type:
+              $ref: '#/components/headers/ContentType'
+            Content-Length:
+              $ref: '#/components/headers/ContentLength'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  mqtt:
+                    $ref: '#/components/schemas/Mqtt'
+              examples:
+                Example 1:
+                  value:
+                    mqtt:
+                      brokerUri: 'mqtts://test.de'
+                      brokerPort: 8883
+                      clientId: 9BE80DF2-9799-467E-9D2C-AC736E8EB6C9
+                      user: ''
+                      password: unconfigured
+                      certificate: unconfigured
+                      topicStart: ZGW16-IP
+                      isConnected: false
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    put:
+      tags:
+        - system/mqtt
+      operationId: system_mqtt_put
+      summary: Configure MQTT connection
+      description: Configure MQTT connection.
+      security:
+        - apikeyAuth: []
+      requestBody:
+        description: Update MQTT parameters
+        content:
+          application/json:
+            schema:
+              properties:
+                mqtt:
+                  $ref: '#/components/schemas/BaseMqtt'
+            examples:
+              Configure broker:
+                value:
+                  mqtt:
+                    brokerUri: 'mqtt://127.0.0.1'
+                    brokerPort: 1883
+                    topicStart: GATEWAY_TOPIC
+                    enabled: true
+              Disable MQTT:
+                value:
+                  mqtt:
+                    enabled: false
+              Set client certificate:
+                value:
+                  mqtt:
+                    brokerUri: 'mqtts://test.mosquitto.org'
+                    brokerPort: 8883
+                    user: ''
+                    password: ''
+                    certificate: configured
+                    topicStart: ZGW16-IP
+                    isConnected: false
+      responses:
+        '200':
+          description: OK
+          headers:
+            Content-Type:
+              $ref: '#/components/headers/ContentType'
+            Content-Length:
+              $ref: '#/components/headers/ContentLength'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  mqtt:
+                    $ref: '#/components/schemas/Mqtt'
+              examples:
+                Configure Broker:
+                  value:
+                    mqtt:
+                      brokerUri: 'mqtts://test.mosquitto.org'
+                      brokerPort: 8883
+                      clientId: 1234569D-27CC-40A7-8B22-7F702D663ABC
+                      user: ''
+                      password: unconfigured
+                      certificate: configured
+                      topicStart: ZGW16-IP
+                      isConnected: false
+                Configure Topic Start:
+                  value:
+                    mqtt:
+                      brokerUri: 'mqtts://test.mosquitto.org'
+                      brokerPort: 8883
+                      clientId: 1234569D-27CC-40A7-8B22-7F702D663ABC
+                      user: ''
+                      password: unconfigured
+                      certificate: configured
+                      topicStart: GATEWAY_TOPIC
+                      isConnected: false
+                Client certificate configured:
+                  value:
+                    mqtt:
+                      brokerUri: 'mqtts://test.mosquitto.org'
+                      brokerPort: 8883
+                      clientId: 1234569D-27CC-40A7-8B22-7F702D663ABC
+                      user: ''
+                      password: unconfigured
+                      certificate: configured
+                      topicStart: ZGW16-IP
+                      isConnected: false
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /system/mqtt/client:
+    get:
+      tags:
+        - system/mqtt
+      operationId: system_mqtt_client_get
+      summary: get MQTT client configuration
+      description: Get MQTT client configuration.
+      security:
+        - apikeyAuth: []
+      responses:
+        '200':
+          description: OK
+          headers:
+            Content-Type:
+              $ref: '#/components/headers/ContentType'
+            Content-Length:
+              $ref: '#/components/headers/ContentLength'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClientMqtt'
+              examples:
+                Example 1:
+                  value:
+                    certificate: unconfigured
+                    key: unconfigured
+                    password: unconfigured
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    put:
+      tags:
+        - system/mqtt
+      operationId: system_mqtt_client_put
+      summary: Configure MQTT client
+      description: Configure MQTT client.
+      security:
+        - apikeyAuth: []
+      requestBody:
+        description: Update MQTT parameters
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClientMqtt'
+            examples:
+              Set client certificate:
+                value:
+                  mqtt:
+                    certificate: '-----BEGIN CERTIFICATE----- VERY_LONG_STRING_HERE -----END CERTIFICATE-----'
+                    key: '-----BEGIN PRIVATE KEY----- VERY_LONG_STRING_HERE -----END PRIVATE KEY-----'
+                    password: test_cert
+      responses:
+        '200':
+          description: OK
+          headers:
+            Content-Type:
+              $ref: '#/components/headers/ContentType'
+            Content-Length:
+              $ref: '#/components/headers/ContentLength'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClientMqtt'
+              examples:
+                Client certificate configured:
+                  value:
+                    certificate: configured
+                    key: configured
+                    password: configured
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /system/modbus/rtu:
+    get:
+      tags:
+        - system/modbus
+      operationId: system_modbus_rtu_get
+      summary: get modbus rtu configuration
+      description: Get modbus rtu configuration.
+      security:
+        - apikeyAuth: []
+      responses:
+        '200':
+          description: OK
+          headers:
+            Content-Type:
+              $ref: '#/components/headers/ContentType'
+            Content-Length:
+              $ref: '#/components/headers/ContentLength'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModbusRTU'
+              examples:
+                DSZ15DZMOD:
+                  value:
+                    baudrate: 9600
+                    parity: none
+                    timeout: 100
+                    busScanActive: false
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    put:
+      tags:
+        - system/modbus
+      operationId: system_modbus_rtu_put
+      summary: configure modbus rtu
+      description: Configure Modbus RTU for single compatible ELTAKO energy meter.
+      security:
+        - apikeyAuth: []
+      requestBody:
+        description: Update Modbus RTU parameters
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModbusRTU'
+            examples:
+              DSZ15DZMOD:
+                value:
+                  baudrate: 9600
+                  parity: none
+                  timeout: 100
+      responses:
+        '200':
+          description: OK
+          headers:
+            Content-Type:
+              $ref: '#/components/headers/ContentType'
+            Content-Length:
+              $ref: '#/components/headers/ContentLength'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModbusRTU'
+              examples:
+                DSZ15DZMOD:
+                  value:
+                    baudrate: 9600
+                    parity: none
+                    timeout: 100
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /system/modbus/tcp:
+    get:
+      tags:
+        - system/modbus
+      operationId: system_modbus_tcp_get
+      summary: get modbus tcp configuration
+      description: Get modbus tcp configuration.
+      security:
+        - apikeyAuth: []
+      responses:
+        '200':
+          description: OK
+          headers:
+            Content-Type:
+              $ref: '#/components/headers/ContentType'
+            Content-Length:
+              $ref: '#/components/headers/ContentLength'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModbusTCP'
+              examples:
+                DSZ15DZMOD:
+                  value:
+                    enabled: true
+                    port: 502
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    put:
+      tags:
+        - system/modbus
+      operationId: system_modbus_tcp_put
+      summary: configure modbus tcp
+      description: Configure Modbus TCP server (slave).
+      security:
+        - apikeyAuth: []
+      requestBody:
+        description: Update Modbus TCP parameters
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModbusTCP'
+            examples:
+              DSZ15DZMOD:
+                value:
+                  enabled: false
+                  port: 5502
+      responses:
+        '200':
+          description: OK
+          headers:
+            Content-Type:
+              $ref: '#/components/headers/ContentType'
+            Content-Length:
+              $ref: '#/components/headers/ContentLength'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModbusTCP'
+              examples:
+                DSZ15DZMOD:
+                  value:
+                    enabled: false
+                    port: 5502
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    parameters: []
+  /system/update:
+    post:
+      tags:
+        - system/update
+      operationId: system_update_put
+      summary: update firmware
+      description: |-
+        Update firmware using binary that is downloaded from official ELTAKO website.
+
+        Make sure to use the correct binary for your device, e.g. ZGW16WL-IP with a version number that is higher than the current one.
+      security:
+        - apikeyAuth: []
+      requestBody:
+        description: Firmware binary file
+        content:
+          application/octet-stream:
+            schema:
+              $ref: '#/components/schemas/BinaryData'
+            example: 0x00 0x01 0x02 0x03
+      responses:
+        '200':
+          description: OK
+          headers:
+            Content-Type:
+              $ref: '#/components/headers/ContentType'
+            Content-Length:
+              $ref: '#/components/headers/ContentLength'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /system/reset:
+    delete:
+      tags:
+        - system/reset
+      operationId: system_reset_delete
+      summary: reset system
+      description: |-
+        Reset the device to factory settings.
+
+        The device will be available via the Access Point after the reset with the default IP configuration.
+
+        Follow the instructions to set a new password and aquire a new API key.
+      security:
+        - apikeyAuth: []
+      responses:
+        '200':
+          description: OK
+          headers:
+            Content-Type:
+              $ref: '#/components/headers/ContentType'
+            Content-Length:
+              $ref: '#/components/headers/ContentLength'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /devices:
+    get:
+      tags:
+        - devices
+      operationId: devices_get
+      summary: get all devices
+      description: |-
+        Get all connected devices with their corresponding information.
+
+        Make sure the Modbus RTU settings are set correctly to see a device.
+      security:
+        - apikeyAuth: []
+      responses:
+        '200':
+          description: OK
+          headers:
+            Content-Type:
+              $ref: '#/components/headers/ContentType'
+            Content-Length:
+              $ref: '#/components/headers/ContentLength'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Devices'
+              examples:
+                Get devices:
+                  value:
+                    devices:
+                      - friendlyId: ''
+                        deviceTypeId: 7f439b45-b3af-424f-9521-3ae00f0ad6d3
+                        manufacturer: ELTAKO GmbH
+                        busType: 1
+                        busAddress: 4
+                        firstSeen: '2024-08-05T16:25:48.941+02:00'
+                        lastSeen: '2024-08-08T15:13:14.190+02:00'
+                        selectedRTU:
+                          - registerId: 30001
+                            priority: DEFAULT
+                          - registerId: 30003
+                            priority: DEFAULT
+                        selectedMQTT: []
+                        selectedHistory:
+                          - 30053
+                          - 30073
+                          - 30075
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  '/devices/{deviceIdentifier}':
+    get:
+      tags:
+        - devices
+      operationId: devices_identifier_get
+      summary: get device information
+      description: |-
+        Get specific device information by device identifier.
+
+        The device identifier is the Modbus RTU address, e.g. `/devices/1`.
+      security:
+        - apikeyAuth: []
+      parameters:
+        - $ref: '#/components/parameters/deviceIdentifier'
+      responses:
+        '200':
+          description: OK
+          headers:
+            Content-Type:
+              $ref: '#/components/headers/ContentType'
+            Content-Length:
+              $ref: '#/components/headers/ContentLength'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  device:
+                    $ref: '#/components/schemas/DeviceExtended'
+              examples:
+                Get device with bus address 1:
+                  value:
+                    device:
+                      friendlyId: Garage
+                      deviceTypeId: 7f439b45-b3af-424f-9521-3ae00f0ad6d3
+                      busAddress: 1
+                      busType: 1
+                      firstSeen: '2024-07-29T21:45:45.218+03:00'
+                      lastSeen: '2024-07-31T12:23:45.258+03:00'
+                      selectedRTU:
+                        - registerId: 30001
+                          priority: DEFAULT
+                        - registerId: 30003
+                          priority: DEFAULT
+                        - registerId: 30073
+                          priority: DEFAULT
+                        - registerId: 30075
+                          priority: DEFAULT
+                      selectedMQTT: []
+                      selectedHistory:
+                        - 30053
+                        - 30073
+                        - 30075
+                      manufacturer: ELTAKO GmbH
+                      functions:
+                        - key: '30001'
+                          value: 123.32
+                          unit: Volt
+                          timestamp: '2024-07-31T12:23:44+03:00'
+                        - key: '30003'
+                          value: -60.52
+                          unit: Volt
+                          timestamp: '2024-07-31T12:23:44+03:00'
+                        - key: '30073'
+                          value: 0.08
+                          unit: kWh
+                          timestamp: '2024-07-31T12:23:45+03:00'
+                        - key: '30075'
+                          value: 0.18
+                          unit: kWh
+                          timestamp: '2024-07-31T12:23:45+03:00'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    put:
+      tags:
+        - devices
+      operationId: devices_identifier_put
+      summary: set device information
+      description: |-
+        Set specific device information by device identifier.
+
+        The device identifier is the Modbus RTU address, e.g. `/devices/1`.
+
+        The device will decline the PUT request with a 400, if:
+          - `selectedRTU` is not selected for a register but either selectedMQTT or selectedHistory are set for that register.
+      security:
+        - apikeyAuth: []
+      parameters:
+        - $ref: '#/components/parameters/deviceIdentifier'
+      requestBody:
+        description: Set device parameters.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BaseDeviceUpdate'
+            examples:
+              Set MQTT defaults:
+                value:
+                  device:
+                    selectedHistory:
+                      - 30053
+                      - 30073
+                      - 30075
+                    selectedMQTT:
+                      - 30001
+                      - 30003
+                      - 30005
+                      - 30007
+                      - 30009
+                      - 30011
+                      - 30013
+                      - 30015
+                      - 30017
+                      - 30031
+                      - 30033
+                      - 30035
+                      - 30053
+                      - 30063
+                      - 30073
+                      - 30075
+                    selectedRTU:
+                      - priority: DEFAULT
+                        registerId: 30001
+                      - priority: DEFAULT
+                        registerId: 30003
+                      - priority: DEFAULT
+                        registerId: 30005
+                      - priority: DEFAULT
+                        registerId: 30007
+                      - priority: DEFAULT
+                        registerId: 30009
+                      - priority: DEFAULT
+                        registerId: 30011
+                      - priority: DEFAULT
+                        registerId: 30013
+                      - priority: DEFAULT
+                        registerId: 30015
+                      - priority: DEFAULT
+                        registerId: 30017
+                      - priority: DEFAULT
+                        registerId: 30031
+                      - priority: DEFAULT
+                        registerId: 30033
+                      - priority: DEFAULT
+                        registerId: 30035
+                      - priority: DEFAULT
+                        registerId: 30053
+                      - priority: DEFAULT
+                        registerId: 30063
+                      - priority: DEFAULT
+                        registerId: 30073
+                      - priority: DEFAULT
+                        registerId: 30075
+      responses:
+        '200':
+          description: OK
+          headers:
+            Content-Type:
+              $ref: '#/components/headers/ContentType'
+            Content-Length:
+              $ref: '#/components/headers/ContentLength'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceUpdate'
+              examples:
+                Device updated:
+                  value:
+                    device:
+                      friendlyId: Garage
+                      deviceTypeId: 7f439b45-b3af-424f-9521-3ae00f0ad6d3
+                      manufacturer: ELTAKO
+                      busType: 1
+                      busAddress: 4
+                      firstSeen: '2024-08-05T16:25:48.941+02:00'
+                      lastSeen: '2024-08-08T15:15:46.972+02:00'
+                      selectedRTU:
+                        - registerId: 30001
+                          priority: DEFAULT
+                        - registerId: 30003
+                          priority: DEFAULT
+                        - registerId: 30005
+                          priority: DEFAULT
+                      selectedMQTT:
+                        - 30001
+                        - 30005
+                      selectedHistory:
+                        - 30001
+                        - 30003
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags:
+        - devices
+      operationId: devices_identifier_delete
+      summary: delete device
+      description: Delete specific device by identifier
+      security:
+        - apikeyAuth: []
+      parameters:
+        - $ref: '#/components/parameters/deviceIdentifier'
+      responses:
+        '200':
+          description: Device deleted
+          headers:
+            Content-Type:
+              $ref: '#/components/headers/ContentType'
+            Content-Length:
+              $ref: '#/components/headers/ContentLength'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  '/devices/{deviceIdentifier}/history':
+    get:
+      tags:
+        - devices
+      operationId: devices_identifier_history_get
+      summary: get device identifier history
+      description: |-
+        Get specific device history information by device identifier.
+
+        The register identifier is based on the register number of the register table value.
+
+        The following resolutions are available:
+        - 1 - Daily values are recorded in 15 minute invervals.
+        - 14 - Biweekly values are recorded in 24 hour intervals.
+        - 365 - Yearly values are recorded in monthly intervals.
+        - 1095 - Three year values recorded in yearly intervals.
+      security:
+        - apikeyAuth: []
+      parameters:
+        - $ref: '#/components/parameters/deviceIdentifier'
+        - $ref: '#/components/parameters/registerIdentifier'
+        - $ref: '#/components/parameters/timeFrame'
+      responses:
+        '200':
+          description: OK
+          headers:
+            Content-Type:
+              $ref: '#/components/headers/ContentType'
+            Content-Length:
+              $ref: '#/components/headers/ContentLength'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceHistory'
+              examples:
+                Example 1:
+                  value:
+                    identifier: 30073
+                    values:
+                      - timestamp: '2023-08-19T13:18:19.743+02:00'
+                        value: 25.6
+                      - timestamp: '2023-08-19T13:18:25.743+02:00'
+                        value: 29.6
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    delete:
+      tags:
+        - devices
+      operationId: devices_identifier_history_delete
+      summary: delete device identifier history
+      description: |-
+        Delete specific device history information by device identifier.
+
+        The identifier is based on the description of the registertable value.
+      security:
+        - apikeyAuth: []
+      parameters:
+        - $ref: '#/components/parameters/deviceIdentifier'
+        - $ref: '#/components/parameters/registerIdentifier'
+      responses:
+        '200':
+          $ref: '#/components/responses/OK'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /devices/scan:
+    get:
+      tags:
+        - devices
+      operationId: devices_scan_get
+      summary: scan for devices
+      description: |-
+        Start a scan for devices that are connected to the Modbus RTU bus.
+
+        The call will complete before the scan is finished.
+
+        The first 16 devices found on the bus will be displayed for devices which bus address range is between 1 and 32.
+      security:
+        - apikeyAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/OK'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /devices/types:
+    get:
+      tags:
+        - devices
+      operationId: devicetypes_get
+      summary: Get device types list
+      description: Returns a list of all (MODBUS) device types known to the device that can be queried. Result data contains detailed register information including description and unit strings.
+      security:
+        - apikeyAuth: []
+      responses:
+        '200':
+          description: OK
+          headers:
+            Content-Type:
+              $ref: '#/components/headers/ContentType'
+            Content-Length:
+              $ref: '#/components/headers/ContentLength'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceTypes'
+              examples:
+                Get device types:
+                  value:
+                    deviceTypes:
+                      - deviceTypeId: 7f439b45-b3af-424f-9521-3ae00f0ad6d3
+                        name: DSZ15DZMOD
+                        manufacturer_reg_number: 464515
+                        meter_type_reg_number: 464525
+                        serial_no_reg_number: 464513
+                        identification_registers:
+                          - register_number: 464515
+                            value:
+                              - 13
+                          - register_number: 464525
+                            value:
+                              - 1
+                              - 2
+                              - 3
+                              - 4
+                              - 5
+                          - register_number: 464513
+                        default_RTU_registers:
+                          - 30001
+                          - 30003
+                          - 30005
+                          - 30007
+                          - 30009
+                          - 30011
+                          - 30013
+                          - 30015
+                          - 30017
+                          - 30031
+                          - 30033
+                          - 30035
+                          - 30053
+                          - 30063
+                          - 30073
+                          - 30075
+                        default_MQTT_registers: []
+                        default_history_registers:
+                          - 30053
+                          - 30073
+                          - 30075
+                        registers:
+                          - number: 30001
+                            scaling_factor: 100
+                            description: [ { en: Voltage of L1 to N }, { de: Spannung von L1 zu N } ]
+                            unit: Volt
+                            reg_type: MB_PARAM_INPUT
+                            address: 0
+                            length: 2
+                            dataType: PARAM_TYPE_U32
+                            data_size: PARAM_SIZE_U32
+                            readwrite: PAR_PERMS_READ_WRITE_TRIGGER
+                          - number: 30003
+                            scaling_factor: 100
+                            description: [ { en: Voltage of L2 to N }, { de: Spannung von L2 zu N } ]
+                            unit: Volt
+                            reg_type: MB_PARAM_INPUT
+                            address: 2
+                            length: 2
+                            dataType: PARAM_TYPE_U32
+                            data_size: PARAM_SIZE_U32
+                            readwrite: PAR_PERMS_READ_WRITE_TRIGGER
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags:
+        - devices
+      summary: Create or overwrite a device type
+      description: |-
+        Creates a new device type if there is no device type with the same device type id.
+        Overwrites the existing device type definition if there is a device type with the same device type id.
+        The device type is used to identify the device and its registers.
+      operationId: post-devices-types
+      requestBody:
+        description: Create new device type
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceType'
+            examples:
+              Example 1:
+                value:
+                  deviceTypes:
+                    - name: DSZ15DZMOD
+                      manufacturer_reg_number: 464515
+                      meter_type_reg_number: 464525
+                      serial_no_reg_number: 464513
+                      identification_registers:
+                        - register_number: 464515
+                          value:
+                            - 13
+                        - register_number: 464525
+                          value:
+                            - 1
+                            - 2
+                            - 3
+                            - 4
+                            - 5
+                        - register_number: 464513
+                      default_RTU_registers:
+                        - 30001
+                        - 30003
+                        - 30005
+                        - 30007
+                        - 30009
+                        - 30011
+                        - 30013
+                        - 30015
+                        - 30017
+                        - 30031
+                        - 30033
+                        - 30035
+                        - 30053
+                        - 30063
+                        - 30073
+                        - 30075
+                      default_MQTT_registers: []
+                      default_history_registers:
+                        - 30053
+                        - 30073
+                        - 30075
+                      registers:
+                        - number: 30001
+                          scaling_factor: 100
+                          description: Voltage of L1 to N
+                          unit: Volt
+                          reg_type: MB_PARAM_INPUT
+                          address: 0
+                          length: 2
+                          dataType: PARAM_TYPE_U32
+                          data_size: PARAM_SIZE_U32
+                          readwrite: PAR_PERMS_READ_WRITE_TRIGGER
+                        - number: 30003
+                          scaling_factor: 100
+                          description: Voltage of L2 to N
+                          unit: Volt
+                          reg_type: MB_PARAM_INPUT
+                          address: 2
+                          length: 2
+                          dataType: PARAM_TYPE_U32
+                          data_size: PARAM_SIZE_U32
+                          readwrite: PAR_PERMS_READ_WRITE_TRIGGER
+                        - number: 30005
+                          scaling_factor: 100
+                          description: Voltage of L3 to N
+                          unit: Volt
+                          reg_type: MB_PARAM_INPUT
+                          address: 4
+                          length: 2
+                          dataType: PARAM_TYPE_U32
+                          data_size: PARAM_SIZE_U32
+                          readwrite: PAR_PERMS_READ_WRITE_TRIGGER
+                        - number: 30007
+                          scaling_factor: 100
+                          description: L1 Current
+                          unit: A
+                          reg_type: MB_PARAM_INPUT
+                          address: 6
+                          length: 2
+                          dataType: PARAM_TYPE_U32
+                          data_size: PARAM_SIZE_U32
+                          readwrite: PAR_PERMS_READ_WRITE_TRIGGER
+                        - number: 30009
+                          scaling_factor: 100
+                          description: L2 Current
+                          unit: A
+                          reg_type: MB_PARAM_INPUT
+                          address: 8
+                          length: 2
+                          dataType: PARAM_TYPE_U32
+                          data_size: PARAM_SIZE_U32
+                          readwrite: PAR_PERMS_READ_WRITE_TRIGGER
+                        - number: 30011
+                          scaling_factor: 100
+                          description: L3 Current
+                          unit: A
+                          reg_type: MB_PARAM_INPUT
+                          address: 10
+                          length: 2
+                          dataType: PARAM_TYPE_U32
+                          data_size: PARAM_SIZE_U32
+                          readwrite: PAR_PERMS_READ_WRITE_TRIGGER
+                        - number: 30013
+                          scaling_factor: 1
+                          description: L1 active power
+                          unit: Watt
+                          reg_type: MB_PARAM_INPUT
+                          address: 12
+                          length: 2
+                          dataType: PARAM_TYPE_U32
+                          data_size: PARAM_SIZE_U32
+                          readwrite: PAR_PERMS_READ_WRITE_TRIGGER
+                        - number: 30015
+                          scaling_factor: 1
+                          description: L2 active power
+                          unit: Watt
+                          reg_type: MB_PARAM_INPUT
+                          address: 14
+                          length: 2
+                          dataType: PARAM_TYPE_U32
+                          data_size: PARAM_SIZE_U32
+                          readwrite: PAR_PERMS_READ_WRITE_TRIGGER
+                        - number: 30017
+                          scaling_factor: 1
+                          description: L3 active power
+                          unit: Watt
+                          reg_type: MB_PARAM_INPUT
+                          address: 16
+                          length: 2
+                          dataType: PARAM_TYPE_U32
+                          data_size: PARAM_SIZE_U32
+                          readwrite: PAR_PERMS_READ_WRITE_TRIGGER
+                        - number: 30031
+                          scaling_factor: 1000
+                          description: L1 power factor
+                          unit: ''
+                          reg_type: MB_PARAM_INPUT
+                          address: 30
+                          length: 2
+                          dataType: PARAM_TYPE_U32
+                          data_size: PARAM_SIZE_U32
+                          readwrite: PAR_PERMS_READ_WRITE_TRIGGER
+                        - number: 30033
+                          scaling_factor: 1000
+                          description: L2 power factor
+                          unit: ''
+                          reg_type: MB_PARAM_INPUT
+                          address: 32
+                          length: 2
+                          dataType: PARAM_TYPE_U32
+                          data_size: PARAM_SIZE_U32
+                          readwrite: PAR_PERMS_READ_WRITE_TRIGGER
+                        - number: 30035
+                          scaling_factor: 1000
+                          description: L3 power factor
+                          unit: ''
+                          reg_type: MB_PARAM_INPUT
+                          address: 34
+                          length: 2
+                          dataType: PARAM_TYPE_U32
+                          data_size: PARAM_SIZE_U32
+                          readwrite: PAR_PERMS_READ_WRITE_TRIGGER
+                        - number: 30053
+                          scaling_factor: 1
+                          description: Total active power
+                          unit: Watt
+                          reg_type: MB_PARAM_INPUT
+                          address: 52
+                          length: 2
+                          dataType: PARAM_TYPE_U32
+                          data_size: PARAM_SIZE_U32
+                          readwrite: PAR_PERMS_READ_WRITE_TRIGGER
+                        - number: 30063
+                          scaling_factor: 1000
+                          description: Total power factor
+                          unit: ''
+                          reg_type: MB_PARAM_INPUT
+                          address: 62
+                          length: 2
+                          dataType: PARAM_TYPE_U32
+                          data_size: PARAM_SIZE_U32
+                          readwrite: PAR_PERMS_READ_WRITE_TRIGGER
+                        - number: 30073
+                          scaling_factor: 100
+                          description: Total imported active energy
+                          unit: kWh
+                          reg_type: MB_PARAM_INPUT
+                          address: 72
+                          length: 2
+                          dataType: PARAM_TYPE_U32
+                          data_size: PARAM_SIZE_U32
+                          readwrite: PAR_PERMS_READ_WRITE_TRIGGER
+                        - number: 30075
+                          scaling_factor: 100
+                          description: Total exported active energy
+                          unit: kWh
+                          reg_type: MB_PARAM_INPUT
+                          address: 74
+                          length: 2
+                          dataType: PARAM_TYPE_U32
+                          data_size: PARAM_SIZE_U32
+                          readwrite: PAR_PERMS_READ_WRITE_TRIGGER
+                        - number: 30081
+                          scaling_factor: 100
+                          description: Current at N conductor
+                          unit: A
+                          reg_type: MB_PARAM_INPUT
+                          address: 80
+                          length: 2
+                          dataType: PARAM_TYPE_U32
+                          data_size: PARAM_SIZE_U32
+                          readwrite: PAR_PERMS_READ_WRITE_TRIGGER
+                        - number: 30083
+                          scaling_factor: 100
+                          description: Total reactive energy
+                          unit: kVarh
+                          reg_type: MB_PARAM_INPUT
+                          address: 82
+                          length: 2
+                          dataType: PARAM_TYPE_U32
+                          data_size: PARAM_SIZE_U32
+                          readwrite: PAR_PERMS_READ_WRITE_TRIGGER
+                        - number: 464515
+                          scaling_factor: 1
+                          description: Manufacturing code
+                          unit: ''
+                          reg_type: MB_PARAM_HOLDING
+                          address: 64514
+                          length: 2
+                          dataType: PARAM_TYPE_U32
+                          data_size: PARAM_SIZE_U32
+                          readwrite: PAR_PERMS_READ_WRITE_TRIGGER
+                        - number: 464525
+                          scaling_factor: 1
+                          description: Meter type
+                          unit: ''
+                          reg_type: MB_PARAM_HOLDING
+                          address: 64524
+                          length: 2
+                          dataType: PARAM_TYPE_U32
+                          data_size: PARAM_SIZE_U32
+                          readwrite: PAR_PERMS_READ_WRITE_TRIGGER
+                        - number: 464513
+                          scaling_factor: 1
+                          description: Serial number
+                          unit: ''
+                          reg_type: MB_PARAM_HOLDING
+                          address: 64512
+                          length: 2
+                          dataType: PARAM_TYPE_U32
+                          data_size: PARAM_SIZE_U32
+                          readwrite: PAR_PERMS_READ_WRITE_TRIGGER
+      responses:
+        '200':
+          $ref: '#/components/responses/OK'
+        '405':
+          $ref: '#/components/responses/NotAllowed'
+  '/devices/types/{deviceTypeId}':
+    get:
+      tags:
+        - devices
+      operationId: devicetype_get
+      summary: Get device type by Id
+      description: Returns a device type information for a single device type as specified by the URL parameter. Result data contains detailed register information including description and unit strings.
+      security:
+        - apikeyAuth: []
+      parameters:
+        - $ref: '#/components/parameters/deviceTypeId'
+        - name: lang
+          in: query
+          description: '2-letter language code, returns default language if code is not found'
+          required: false
+          schema:
+            type: string
+            default: en
+            examples:
+              - en
+      responses:
+        '200':
+          description: OK
+          headers:
+            Content-Type:
+              $ref: '#/components/headers/ContentType'
+            Content-Length:
+              $ref: '#/components/headers/ContentLength'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceType'
+              examples:
+                Get DSZ15DZMOD Type:
+                  value:
+                    deviceTypeId: 7f439b45-b3af-424f-9521-3ae00f0ad6d3
+                    name: DSZ15DZMOD
+                    manufacturer_reg_number: 464515
+                    meter_type_reg_number: 464525
+                    serial_no_reg_number: 464513
+                    identification_registers:
+                      - register_number: 464515
+                        value:
+                          - 13
+                      - register_number: 464525
+                        value:
+                          - 1
+                          - 2
+                          - 3
+                          - 4
+                          - 5
+                      - register_number: 464513
+                    default_RTU_registers:
+                      - 30001
+                      - 30003
+                      - 30005
+                      - 30007
+                      - 30009
+                      - 30011
+                      - 30013
+                      - 30015
+                      - 30017
+                      - 30031
+                      - 30033
+                      - 30035
+                      - 30053
+                      - 30063
+                      - 30073
+                      - 30075
+                    default_MQTT_registers: []
+                    default_history_registers:
+                      - 30053
+                      - 30073
+                      - 30075
+                    registers:
+                      - number: 30001
+                        scaling_factor: 100
+                        description: [ { en: Voltage of L1 to N }, { de: Spannung von L1 zu N } ]
+                        unit: Volt
+                        reg_type: MB_PARAM_INPUT
+                        address: 0
+                        length: 2
+                        dataType: PARAM_TYPE_U32
+                        data_size: PARAM_SIZE_U32
+                        readwrite: PAR_PERMS_READ_WRITE_TRIGGER
+                      - number: 30003
+                        scaling_factor: 100
+                        description: [ { en: Voltage of L2 to N }, { de: Spannung von L2 zu N } ]
+                        unit: Volt
+                        reg_type: MB_PARAM_INPUT
+                        address: 2
+                        length: 2
+                        dataType: PARAM_TYPE_U32
+                        data_size: PARAM_SIZE_U32
+                        readwrite: PAR_PERMS_READ_WRITE_TRIGGER
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      summary: Delete device type by Id
+      operationId: devicetype_delete
+      tags:
+        - devices
+      responses:
+        '200':
+          $ref: '#/components/responses/OK'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      description: 'This operation deletes a device type template from the device storage. Only previously uploaded templates may be deleted, build-in templates cannot.'
+      security:
+        - apikeyAuth: []
+      parameters:
+        - $ref: '#/components/parameters/deviceTypeId'

@@ -20,6 +20,7 @@ OpenAPI specifications provide detailed definitions of our APIs, including endpo
 ### Products
 1. [Series 64-IPM & Series 62-IP](./series64ipm/ELKTAO-SERIES-64IPM-OpenAPI.yaml)
     1. [General Information](https://github.com/Eltako/series62ip)
+2. [ZGW16WL-IP](./zgw16ip/ELTAKO-ZGW16-IP-OpenAPI.yaml)
 
 ## Usage
 
