@@ -1,0 +1,11 @@
+title = "Gitleaks configuration"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "filter-x-internal"
+description = "Filter internal API endpoints"
+regex = '''x-internal'''
+path = '''.*yaml'''
+
